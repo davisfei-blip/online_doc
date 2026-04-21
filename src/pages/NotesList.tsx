@@ -99,6 +99,11 @@ const NotesList: React.FC = () => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8">
+          {storageMode === 'local' && (
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              当前为本地存储（未检测到 Supabase 环境变量）。请在 GitHub Secrets 配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY` 并重新部署。
+            </div>
+          )}
           {errorMessage && (
             <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {errorMessage}
