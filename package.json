@@ -8,13 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit",
-    "cap:sync": "npm run build && npx cap sync ios",
-    "cap:open": "npx cap open ios"
+    "check": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@capacitor/core": "^8.3.1",
-    "@capacitor/ios": "^8.3.1",
     "@supabase/supabase-js": "^2.43.4",
     "@tiptap/extension-image": "^2.27.2",
     "@tiptap/extension-link": "^2.4.0",
@@ -35,7 +31,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.3.1",
     "@eslint/js": "^9.25.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^22.15.30",
