@@ -11,13 +11,25 @@ const NotesList: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const storageMode = dataStore.isCloudEnabled ? 'cloud' : 'local';
+  const storageLabel = storageMode === 'cloud' ? '云端存储' : '本地存储';
+  const storageStyle = storageMode === 'cloud'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : 'bg-amber-50 text-amber-700 border-amber-200';
   const fetchNotes = useCallback(async () => {
     try {
+      setErrorMessage(null);
       const data = await dataStore.getNotes();
       setNotes(data);
     } catch (error) {
       console.error('Error fetching notes:', error);
+      if (dataStore.isCloudEnabled) {
+        setErrorMessage('云端存储未就绪：请检查 Supabase 的环境变量与数据库表是否已初始化。');
+      } else {
+        setErrorMessage('本地存储读取失败，请刷新页面重试。');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,15 +72,20 @@ const NotesList: React.FC = () => {
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
-          <div className="relative w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="搜索笔记..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-            />
+          <div className="flex items-center gap-4">
+            <div className="relative w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="搜索笔记..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+            <span className={`px-2.5 py-1 text-xs rounded-full border ${storageStyle}`}>
+              {storageLabel}
+            </span>
           </div>
           
           <button
@@ -82,6 +99,11 @@ const NotesList: React.FC = () => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8">
+          {errorMessage && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {errorMessage}
+            </div>
+          )}
           {loading ? (
             <div className="flex justify-center items-center h-full text-slate-500">
               加载中...
