@@ -28,3 +28,8 @@ VITE_SUPABASE_ANON_KEY=你的ANON_KEY
 ## 部署到 GitHub Pages
 
 推送到 `main` 分支后，GitHub Actions 会自动构建并部署。
+
+如果需要云端持久化，请在 GitHub 仓库里设置 Secrets：
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
