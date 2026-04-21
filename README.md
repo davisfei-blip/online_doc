@@ -1,57 +1,30 @@
-# React + TypeScript + Vite
+# Cloud Notes
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个支持富文本编辑、标签管理的云笔记项目。默认可本地使用，配置 Supabase 后可跨设备持久化。
 
-Currently, two official plugins are available:
+## 本地启动
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 启用云端持久化（跨设备同步）
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. 在 Supabase 创建项目，获取 `Project URL` 和 `anon public` Key。
+2. 在项目根目录创建 `.env` 文件，写入：
 
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```env
+VITE_SUPABASE_URL=你的项目URL
+VITE_SUPABASE_ANON_KEY=你的ANON_KEY
 ```
+
+3. 在 Supabase 的 SQL Editor 中执行迁移脚本：
+
+- `supabase/migrations/20260421010000_public_notes.sql`
+
+执行成功后，刷新网页即可启用云端持久化。没有配置 `Supabase` 时会自动使用本地存储。
+
+## 部署到 GitHub Pages
+
+推送到 `main` 分支后，GitHub Actions 会自动构建并部署。

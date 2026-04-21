@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Tag } from '../types';
-import { localDb } from '../lib/localDb';
+import { dataStore } from '../lib/dataStore';
 
 const SAVE_DELAY = 1000; // 1 second
 
@@ -124,17 +124,17 @@ const NoteEditor: React.FC = () => {
     },
   });
 
-  const fetchTags = useCallback(() => {
+  const fetchTags = useCallback(async () => {
     if (!user) return;
-    const tags = localDb.getTags();
+    const tags = await dataStore.getTags();
     setAvailableTags(tags);
   }, [user]);
 
-  const fetchNote = useCallback(() => {
+  const fetchNote = useCallback(async () => {
     if (!user || !id) return;
     
     try {
-      const note = localDb.getNoteById(id);
+      const note = await dataStore.getNoteById(id);
       
       if (note) {
         setTitle(note.title);
@@ -157,27 +157,24 @@ const NoteEditor: React.FC = () => {
     }
   }, [id, fetchTags, fetchNote]);
 
-  const saveNote = useCallback(() => {
+  const saveNote = useCallback(async () => {
     if (!user) return;
     
     try {
       const noteData = {
         title: title || '无标题笔记',
         content: editor?.getHTML() || '',
-        user_id: user.id,
         tags: selectedTags
       };
 
       if (!id) {
-        // Create new
-        const newNote = localDb.createNote(noteData);
+        const newNote = await dataStore.createNote(noteData);
         // Update URL without reloading to trigger the id dependency and prevent future creates
         window.history.replaceState(null, '', `/notes/${newNote.id}`);
         // We need to force a re-render or state update so the next save acts as an update
         navigate(`/notes/${newNote.id}`, { replace: true });
       } else {
-        // Update existing
-        localDb.updateNote(id, noteData);
+        await dataStore.updateNote(id, noteData);
       }
 
       setSaveStatus('saved');

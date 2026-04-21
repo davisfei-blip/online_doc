@@ -3,7 +3,7 @@ import { Plus, Tag as TagIcon, Trash2, Edit2, Check, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Tag } from '../types';
 import Sidebar from '../components/Sidebar';
-import { localDb } from '../lib/localDb';
+import { dataStore } from '../lib/dataStore';
 
 const TagsManager: React.FC = () => {
   const [tags, setTags] = useState<Tag[]>([]);
@@ -13,23 +13,11 @@ const TagsManager: React.FC = () => {
   const [editName, setEditName] = useState('');
   const { user } = useAuth();
 
-  const fetchTags = useCallback(() => {
+  const fetchTags = useCallback(async () => {
     if (!user) return;
     try {
-      const data = localDb.getTags();
-      
-      // Calculate note counts for each tag
-      const notes = localDb.getNotes();
-      const tagsWithCounts = data.map(tag => {
-        const count = notes.filter(note => 
-          note.tags?.some(t => t.id === tag.id)
-        ).length;
-        return { ...tag, notes: [{ count }] };
-      });
-      
-      setTags(tagsWithCounts.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ));
+      const data = await dataStore.getTags();
+      setTags(data);
     } catch (error) {
       console.error('Error fetching tags:', error);
     } finally {
@@ -41,7 +29,7 @@ const TagsManager: React.FC = () => {
     fetchTags();
   }, [fetchTags]);
 
-  const handleCreateTag = (e: React.FormEvent) => {
+  const handleCreateTag = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTagName.trim() || !user) return;
 
@@ -53,7 +41,7 @@ const TagsManager: React.FC = () => {
         return;
       }
 
-      const newTag = localDb.createTag(name, user.id);
+      const newTag = await dataStore.createTag(name);
       setTags([newTag, ...tags]);
       setNewTagName('');
     } catch (error) {
@@ -72,7 +60,7 @@ const TagsManager: React.FC = () => {
     setEditName('');
   };
 
-  const saveEdit = (id: string) => {
+  const saveEdit = async (id: string) => {
     const name = editName.trim();
     if (!name) return;
 
@@ -83,7 +71,7 @@ const TagsManager: React.FC = () => {
         return;
       }
 
-      const updatedTag = localDb.updateTag(id, name);
+      const updatedTag = await dataStore.updateTag(id, name);
       if (updatedTag) {
         // Keep the note count when updating the state
         const currentTag = tags.find(t => t.id === id);
@@ -96,11 +84,11 @@ const TagsManager: React.FC = () => {
     }
   };
 
-  const deleteTag = (id: string) => {
+  const deleteTag = async (id: string) => {
     if (!window.confirm('确定要删除这个标签吗？关联此标签的笔记将保留，但标签会被移除。')) return;
 
     try {
-      localDb.deleteTag(id);
+      await dataStore.deleteTag(id);
       setTags(tags.filter(t => t.id !== id));
     } catch (error) {
       console.error('Error deleting tag:', error);

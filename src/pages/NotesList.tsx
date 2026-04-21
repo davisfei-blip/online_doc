@@ -3,26 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Clock, Tag as TagIcon, Trash2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { useAuth } from '../contexts/AuthContext';
 import { Note } from '../types';
 import Sidebar from '../components/Sidebar';
-import { localDb } from '../lib/localDb';
+import { dataStore } from '../lib/dataStore';
 
 const NotesList: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const fetchNotes = useCallback(() => {
+  const fetchNotes = useCallback(async () => {
     try {
-      const data = localDb.getNotes();
-      // Sort by updated_at descending
-      const sortedData = data.sort((a, b) => 
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      );
-      setNotes(sortedData);
+      const data = await dataStore.getNotes();
+      setNotes(data);
     } catch (error) {
       console.error('Error fetching notes:', error);
     } finally {
@@ -41,12 +34,12 @@ const NotesList: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchNotes]);
 
-  const deleteNote = (id: string, e: React.MouseEvent) => {
+  const deleteNote = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm('确定要删除这条笔记吗？')) return;
 
     try {
-      localDb.deleteNote(id);
+      await dataStore.deleteNote(id);
       setNotes(notes.filter((n) => n.id !== id));
     } catch (error) {
       console.error('Error deleting note:', error);
