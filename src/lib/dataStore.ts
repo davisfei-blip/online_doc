@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { localDb } from './localDb';
-import { Note, Tag } from '../types';
+import { Attachment, Note, Tag } from '../types';
 
 const NOTES_TABLE = 'notes_public';
 const TAGS_TABLE = 'tags_public';
@@ -16,6 +16,7 @@ const mapSupabaseNotes = (data: Record<string, unknown>[] | null): Note[] => {
       content: string;
       created_at: string;
       updated_at: string;
+      attachments?: Attachment[];
       tags?: { tag: Tag }[];
     };
 
@@ -26,6 +27,7 @@ const mapSupabaseNotes = (data: Record<string, unknown>[] | null): Note[] => {
       created_at: base.created_at,
       updated_at: base.updated_at,
       user_id: 'cloud',
+      attachments: Array.isArray(base.attachments) ? base.attachments : [],
       tags: Array.isArray(base.tags)
         ? base.tags.map((t) => ({ ...t.tag, user_id: 'cloud' }))
         : [],
@@ -85,6 +87,7 @@ export const dataStore = {
           title: note.title || '无标题笔记',
           content: note.content || '',
           workspace_id: WORKSPACE_ID,
+          attachments: note.attachments || [],
         },
       ])
       .select()
@@ -113,6 +116,7 @@ export const dataStore = {
       .update({
         title: updates.title,
         content: updates.content,
+        attachments: updates.attachments || [],
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

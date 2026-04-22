@@ -9,13 +9,13 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
-import { 
-  ArrowLeft, Save, Bold, Italic, Strikethrough, 
+import {
+  ArrowLeft, Save, Bold, Italic, Strikethrough,
   List, ListOrdered, Quote, Heading1, Heading2, Tag as TagIcon,
-  Image as ImageIcon, Table as TableIcon, Trash2
+  Image as ImageIcon, Table as TableIcon, Trash2, Paperclip
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Tag } from '../types';
+import { Attachment, Tag } from '../types';
 import { dataStore } from '../lib/dataStore';
 
 const SAVE_DELAY = 1000; // 1 second
@@ -29,6 +29,7 @@ const NoteEditor: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -78,6 +79,7 @@ const NoteEditor: React.FC = () => {
       handlePaste: (view, event, slice) => {
         const items = Array.from(event.clipboardData?.items || []);
         const imageItem = items.find(item => item.type.indexOf('image') === 0);
+        const fileItem = items.find(item => item.kind === 'file' && item.type.indexOf('image') !== 0);
         
         if (imageItem) {
           event.preventDefault();
@@ -97,12 +99,21 @@ const NoteEditor: React.FC = () => {
           }
           return true;
         }
+        if (fileItem) {
+          event.preventDefault();
+          const file = fileItem.getAsFile();
+          if (file) {
+            void addAttachments([file]);
+          }
+          return true;
+        }
         return false;
       },
       handleDrop: (view, event, slice, moved) => {
         if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
-          const file = event.dataTransfer.files[0];
-          if (file.type.indexOf('image') === 0) {
+          const files = Array.from(event.dataTransfer.files);
+          const first = files[0];
+          if (first.type.indexOf('image') === 0) {
             event.preventDefault();
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -115,9 +126,12 @@ const NoteEditor: React.FC = () => {
                 view.dispatch(transaction);
               }
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(first);
             return true;
           }
+          event.preventDefault();
+          void addAttachments(files);
+          return true;
         }
         return false;
       },
@@ -140,6 +154,7 @@ const NoteEditor: React.FC = () => {
         setTitle(note.title);
         editor?.commands.setContent(note.content);
         setSelectedTags(note.tags || []);
+        setAttachments(note.attachments || []);
       }
     } catch (error) {
       console.error('Error fetching note:', error);
@@ -164,7 +179,8 @@ const NoteEditor: React.FC = () => {
       const noteData = {
         title: title || '无标题笔记',
         content: editor?.getHTML() || '',
-        tags: selectedTags
+        tags: selectedTags,
+        attachments
       };
 
       if (!id) {
@@ -182,7 +198,7 @@ const NoteEditor: React.FC = () => {
       console.error('Error saving note:', error);
       setSaveStatus('error');
     }
-  }, [user, title, editor, id, selectedTags, navigate]);
+  }, [user, title, editor, id, selectedTags, attachments, navigate]);
 
   // Debounced save
   const currentHtml = editor?.getHTML();
@@ -213,6 +229,50 @@ const NoteEditor: React.FC = () => {
     if (url) {
       editor?.chain().focus().setImage({ src: url }).run();
     }
+  };
+
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const addAttachments = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    const newItems = await Promise.all(
+      list.map(
+        (file) =>
+          new Promise<Attachment>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+              resolve({
+                id: crypto.randomUUID(),
+                name: file.name,
+                type: file.type || 'application/octet-stream',
+                size: file.size,
+                dataUrl,
+                created_at: new Date().toISOString(),
+              });
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+
+    setAttachments((prev) => [...prev, ...newItems]);
+    setSaveStatus('saving');
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((item) => item.id !== id));
+    setSaveStatus('saving');
+  };
+
+  const formatSize = (size: number) => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   };
 
   const addTable = () => {
@@ -307,6 +367,13 @@ const NoteEditor: React.FC = () => {
               title="插入图片"
             >
               <ImageIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded hover:bg-slate-100 text-slate-600"
+              title="添加附件"
+            >
+              <Paperclip className="w-4 h-4" />
             </button>
             <button
               onClick={addTable}
@@ -442,6 +509,73 @@ const NoteEditor: React.FC = () => {
             placeholder="无标题笔记"
             className="w-full text-4xl font-bold text-slate-900 placeholder:text-slate-300 border-none outline-none bg-transparent mb-8"
           />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={(event) => {
+              if (event.target.files) {
+                void addAttachments(event.target.files);
+                event.target.value = '';
+              }
+            }}
+            className="hidden"
+          />
+
+          <div
+            className="mb-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (event.dataTransfer.files) {
+                void addAttachments(event.dataTransfer.files);
+              }
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-slate-700 font-medium">附件</div>
+                <div className="text-xs text-slate-500">支持拖拽或点击添加，格式不限（doc / txt / video / pdf 等）</div>
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+              >
+                添加附件
+              </button>
+            </div>
+            {attachments.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {attachments.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
+                  >
+                    <div>
+                      <div className="text-sm text-slate-800">{item.name}</div>
+                      <div className="text-xs text-slate-500">{formatSize(item.size)}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={item.dataUrl}
+                        download={item.name}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        下载
+                      </a>
+                      <button
+                        onClick={() => removeAttachment(item.id)}
+                        className="text-xs text-red-500 hover:text-red-600"
+                      >
+                        移除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           
           <EditorContent editor={editor} />
         </div>

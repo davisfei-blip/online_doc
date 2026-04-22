@@ -1,4 +1,4 @@
-import { Note, Tag } from '../types';
+import { Attachment, Note, Tag } from '../types';
 
 const NOTES_KEY = 'local_notes';
 const TAGS_KEY = 'local_tags';
@@ -24,6 +24,7 @@ export const localDb = {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       tags: note.tags || [],
+      attachments: note.attachments || [],
     };
     notes.push(newNote);
     localDb.saveNotes(notes);

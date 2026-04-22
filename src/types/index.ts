@@ -6,6 +6,15 @@ export interface Tag {
   notes?: { count: number }[];
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
+  created_at: string;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -14,4 +23,5 @@ export interface Note {
   created_at: string;
   updated_at: string;
   tags?: Tag[];
+  attachments?: Attachment[];
 }
